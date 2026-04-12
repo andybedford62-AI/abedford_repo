@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Sparkles, Eye, EyeOff, Loader2, Check } from "lucide-react";
 
 const passwordChecks = [
@@ -11,8 +11,11 @@ const passwordChecks = [
   { label: "One number", test: (p: string) => /\d/.test(p) },
 ];
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("invite") ?? "";
+
   const [form, setForm] = useState({ name: "", email: "", password: "", workspaceName: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -24,10 +27,21 @@ export default function RegisterPage() {
     setError("");
 
     try {
+      const body: Record<string, string> = {
+        name: form.name,
+        email: form.email,
+        password: form.password,
+      };
+      if (inviteToken) {
+        body.inviteToken = inviteToken;
+      } else {
+        body.workspaceName = form.workspaceName;
+      }
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
@@ -68,7 +82,7 @@ export default function RegisterPage() {
           </Link>
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mt-4">Create your account</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
-            Free forever. No credit card required.
+            {inviteToken ? "You've been invited — sign up to join." : "Free forever. No credit card required."}
           </p>
         </div>
 
@@ -109,19 +123,21 @@ export default function RegisterPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Workspace name
-                </label>
-                <input
-                  type="text"
-                  value={form.workspaceName}
-                  onChange={(e) => setForm({ ...form, workspaceName: e.target.value })}
-                  placeholder="My Company"
-                  required
-                  className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-nexus-400 dark:focus:border-nexus-600 transition-colors text-sm"
-                />
-              </div>
+              {!inviteToken && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Workspace name
+                  </label>
+                  <input
+                    type="text"
+                    value={form.workspaceName}
+                    onChange={(e) => setForm({ ...form, workspaceName: e.target.value })}
+                    placeholder="My Company"
+                    required
+                    className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-nexus-400 dark:focus:border-nexus-600 transition-colors text-sm"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -183,11 +199,22 @@ export default function RegisterPage() {
 
         <p className="mt-6 text-center text-sm text-gray-500">
           Already have an account?{" "}
-          <Link href="/login" className="text-nexus-600 dark:text-nexus-400 font-semibold hover:underline">
+          <Link
+            href={inviteToken ? `/login?invite=${inviteToken}` : "/login"}
+            className="text-nexus-600 dark:text-nexus-400 font-semibold hover:underline"
+          >
             Sign in
           </Link>
         </p>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   );
 }

@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Sparkles, Eye, EyeOff, Loader2, Github, Chrome } from "lucide-react";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("invite") ?? "";
+
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -28,6 +31,14 @@ export default function LoginPage() {
       setError("Invalid email or password.");
       setLoading(false);
     } else {
+      // If coming from an invite, consume it after login
+      if (inviteToken) {
+        try {
+          await fetch(`/api/team/accept-invite/${inviteToken}`, { method: "POST" });
+        } catch {
+          // Non-fatal — user still gets to dashboard
+        }
+      }
       router.push("/dashboard");
     }
   };
@@ -53,7 +64,9 @@ export default function LoginPage() {
 
           <div className="mb-8">
             <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Welcome back</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">Sign in to your workspace</p>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">
+              {inviteToken ? "Sign in to accept your invitation." : "Sign in to your workspace"}
+            </p>
           </div>
 
           {/* OAuth buttons */}
@@ -149,7 +162,10 @@ export default function LoginPage() {
 
           <p className="mt-6 text-center text-sm text-gray-500">
             Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-nexus-600 dark:text-nexus-400 font-semibold hover:underline">
+            <Link
+              href={inviteToken ? `/register?invite=${inviteToken}` : "/register"}
+              className="text-nexus-600 dark:text-nexus-400 font-semibold hover:underline"
+            >
               Sign up free
             </Link>
           </p>
@@ -190,5 +206,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
