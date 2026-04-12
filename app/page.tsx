@@ -30,14 +30,18 @@ function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
-            {["Features", "Pricing", "About", "Blog"].map((item) => (
-              <Link
-                key={item}
-                href={`/${item.toLowerCase()}`}
+            {[
+              { label: "Features", href: "/#features" },
+              { label: "Pricing", href: "/#pricing" },
+              { label: "About", href: "/#about" },
+            ].map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
                 className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
-                {item}
-              </Link>
+                {item.label}
+              </a>
             ))}
           </div>
 
@@ -67,15 +71,19 @@ function Navbar() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden border-t border-border bg-background px-4 py-4 space-y-2">
-          {["Features", "Pricing", "About", "Blog"].map((item) => (
-            <Link
-              key={item}
-              href={`/${item.toLowerCase()}`}
+          {[
+            { label: "Features", href: "/#features" },
+            { label: "Pricing", href: "/#pricing" },
+            { label: "About", href: "/#about" },
+          ].map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
               className="block py-2 text-sm font-medium"
               onClick={() => setMenuOpen(false)}
             >
-              {item}
-            </Link>
+              {item.label}
+            </a>
           ))}
           <div className="pt-2 flex flex-col gap-2">
             <Link href="/login" className="block py-2 text-center border border-border rounded-lg text-sm font-medium">
@@ -316,7 +324,7 @@ const features = [
 
 function Features() {
   return (
-    <section className="py-24 bg-gray-50 dark:bg-[#080815]">
+    <section className="py-24 bg-gray-50 dark:bg-[#080815]" id="features">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-nexus-100 dark:bg-nexus-950/50 text-nexus-700 dark:text-nexus-300 text-sm font-medium mb-4">
@@ -508,7 +516,7 @@ function Pricing() {
 // ========================
 function CTA() {
   return (
-    <section className="py-24 bg-gradient-to-br from-nexus-600 via-violet-600 to-purple-700 relative overflow-hidden">
+    <section className="py-24 bg-gradient-to-br from-nexus-600 via-violet-600 to-purple-700 relative overflow-hidden" id="about">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-96 bg-white/5 blur-[80px] rounded-full" />
