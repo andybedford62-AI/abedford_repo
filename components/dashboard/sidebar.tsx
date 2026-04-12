@@ -6,7 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import {
   LayoutDashboard, FolderKanban, Bot, MessageSquare, BarChart3,
   Settings, Users, Bell, LogOut, Sparkles, ChevronDown,
-  Plus, HelpCircle, Zap
+  Plus, HelpCircle, Zap, ShieldAlert
 } from "lucide-react";
 import { cn, generateInitials } from "@/lib/utils";
 import { useState } from "react";
@@ -31,6 +31,7 @@ export function Sidebar() {
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
 
   const user = session?.user;
+  const isSuperAdmin = (user as { role?: string })?.role === "SUPER_ADMIN";
   const initials = user?.name ? generateInitials(user.name) : "U";
 
   return (
@@ -105,6 +106,19 @@ export function Sidebar() {
 
       {/* Bottom items */}
       <div className="px-3 pb-2 space-y-0.5">
+        {isSuperAdmin && (
+          <Link
+            href="/admin"
+            className={cn(
+              "sidebar-item",
+              pathname.startsWith("/admin") && "active",
+              "text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+            )}
+          >
+            <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+            <span>Admin Panel</span>
+          </Link>
+        )}
         {bottomItems.map(({ href, icon: Icon, label }) => (
           <Link
             key={href}
