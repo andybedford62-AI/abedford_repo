@@ -8,7 +8,7 @@ export const maxDuration = 30;
 
 const chatSchema = z.object({
   message: z.string().min(1).max(10000),
-  conversationId: z.string().optional(),
+  conversationId: z.string().nullish(),
 });
 
 export async function POST(req: NextRequest) {
