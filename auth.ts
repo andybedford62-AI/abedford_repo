@@ -56,17 +56,48 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session: updateData }) {
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
       }
+
+      // Handle impersonation updates
+      if (trigger === "update" && updateData) {
+        if (updateData.impersonateUserId) {
+          // Only SUPER_ADMIN can impersonate
+          const currentRole = (token.originalRole as string) || (token.role as string);
+          if (currentRole === "SUPER_ADMIN") {
+            const target = await db.user.findUnique({
+              where: { id: updateData.impersonateUserId as string },
+              select: { id: true, role: true },
+            });
+            if (target) {
+              token.originalId = token.originalId || token.id;
+              token.originalRole = token.originalRole || token.role;
+              token.id = target.id;
+              token.role = target.role;
+              token.impersonating = true;
+            }
+          }
+        }
+        if (updateData.stopImpersonation) {
+          token.id = token.originalId || token.id;
+          token.role = token.originalRole || token.role;
+          token.originalId = undefined;
+          token.originalRole = undefined;
+          token.impersonating = false;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string;
         (session.user as { role?: string }).role = token.role as string;
+        (session.user as { impersonating?: boolean }).impersonating = (token.impersonating as boolean) || false;
+        (session.user as { originalAdminId?: string }).originalAdminId = token.originalId as string | undefined;
       }
       return session;
     },

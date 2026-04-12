@@ -48,3 +48,36 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ name: updated.name, description: updated.description });
 }
+
+export async function DELETE() {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const membership = await db.workspaceMember.findFirst({
+    where: { userId: session.user.id, role: "OWNER" },
+  });
+
+  if (!membership) return NextResponse.json({ error: "Only workspace owners can delete" }, { status: 403 });
+
+  const workspaceId = membership.workspaceId;
+
+  await db.$transaction(async (tx) => {
+    const projects = await tx.project.findMany({ where: { workspaceId }, select: { id: true } });
+    const projectIds = projects.map((p) => p.id);
+    await tx.task.deleteMany({ where: { projectId: { in: projectIds } } });
+    await tx.project.deleteMany({ where: { workspaceId } });
+
+    const channels = await tx.channel.findMany({ where: { workspaceId }, select: { id: true } });
+    const channelIds = channels.map((c) => c.id);
+    await tx.message.deleteMany({ where: { channelId: { in: channelIds } } });
+    await tx.channel.deleteMany({ where: { workspaceId } });
+
+    await tx.workspaceInvite.deleteMany({ where: { workspaceId } });
+    await tx.activityLog.deleteMany({ where: { workspaceId } });
+    await tx.workspaceMember.deleteMany({ where: { workspaceId } });
+    await tx.workspace.delete({ where: { id: workspaceId } });
+  });
+
+  return NextResponse.json({ success: true });
+}
+

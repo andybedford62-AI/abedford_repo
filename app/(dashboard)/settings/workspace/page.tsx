@@ -1,13 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Building2, Save, Check, ArrowLeft } from "lucide-react";
+import { Save, Check, ArrowLeft, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function WorkspaceSettingsPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [plan, setPlan] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -142,7 +146,7 @@ export default function WorkspaceSettingsPage() {
       </div>
 
       {/* Plan */}
-      <div className="bg-white dark:bg-[#0d0d21] rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+      <div className="bg-white dark:bg-[#0d0d21] rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-4">
         <h2 className="font-bold text-gray-900 dark:text-white mb-1 text-sm">Subscription Plan</h2>
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -154,6 +158,41 @@ export default function WorkspaceSettingsPage() {
           >
             Manage billing →
           </Link>
+        </div>
+      </div>
+
+      {/* Danger Zone */}
+      <div className="bg-white dark:bg-[#0d0d21] rounded-2xl border-2 border-red-200 dark:border-red-900/50 p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <AlertTriangle className="w-4 h-4 text-red-500" />
+          <h2 className="font-bold text-red-600 dark:text-red-400 text-sm">Danger Zone</h2>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          Permanently delete this workspace and all its projects, tasks, and messages. This cannot be undone.
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1.5">
+              Type <span className="font-bold text-gray-900 dark:text-white">{name}</span> to confirm
+            </label>
+            <input
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              placeholder={name}
+              className="w-full px-3 py-2 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-400"
+            />
+          </div>
+          <button
+            disabled={deleteConfirm !== name || deleting}
+            onClick={async () => {
+              setDeleting(true);
+              const res = await fetch("/api/settings/workspace", { method: "DELETE" });
+              if (res.ok) router.push("/register");
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            {deleting ? "Deleting..." : "Delete workspace permanently"}
+          </button>
         </div>
       </div>
     </div>
