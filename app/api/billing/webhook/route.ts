@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { db } from "@/lib/db";
 import Stripe from "stripe";
 
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET);
+    event = getStripe().webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error("[WEBHOOK] Signature verification failed", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   switch (event.type) {
     case "checkout.session.completed": {
-      const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+      const subscription = await getStripe().subscriptions.retrieve(session.subscription as string);
       const workspaceId = session.metadata?.workspaceId;
       const plan = session.metadata?.plan;
 
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     case "invoice.payment_succeeded": {
       const invoice = event.data.object as Stripe.Invoice;
       if (invoice.subscription) {
-        const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+        const subscription = await getStripe().subscriptions.retrieve(invoice.subscription as string);
         const workspaceId = subscription.metadata?.workspaceId;
 
         if (!workspaceId) break;

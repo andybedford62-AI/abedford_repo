@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
-import { stripe, PLANS, PlanKey } from "@/lib/stripe";
+import { getStripe, PLANS, PlanKey } from "@/lib/stripe";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     // Get or create Stripe customer
     let customerId = workspace.stripeCustomerId;
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const customer = await getStripe().customers.create({
         email: session.user.email ?? undefined,
         name: workspace.name,
         metadata: { workspaceId, userId: session.user.id },
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const checkoutSession = await stripe.checkout.sessions.create({
+    const checkoutSession = await getStripe().checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
       payment_method_types: ["card"],

@@ -1,9 +1,19 @@
 import Stripe from "stripe";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-11-20.acacia",
-  typescript: true,
-});
+let _stripe: Stripe | null = null;
+
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error("STRIPE_SECRET_KEY is not set");
+    }
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-11-20.acacia",
+      typescript: true,
+    });
+  }
+  return _stripe;
+}
 
 export const PLANS = {
   FREE: {
@@ -20,7 +30,7 @@ export const PLANS = {
   },
   STARTER: {
     name: "Starter",
-    price: 1200, // cents
+    price: 1200,
     priceId: process.env.STRIPE_STARTER_PRICE_ID,
     features: {
       maxUsers: 10,
@@ -36,7 +46,7 @@ export const PLANS = {
     priceId: process.env.STRIPE_PRO_PRICE_ID,
     features: {
       maxUsers: 25,
-      maxProjects: -1, // unlimited
+      maxProjects: -1,
       aiQueriesPerMonth: 5000,
       analytics: true,
       customIntegrations: true,
@@ -47,7 +57,7 @@ export const PLANS = {
     price: 9900,
     priceId: process.env.STRIPE_ENTERPRISE_PRICE_ID,
     features: {
-      maxUsers: -1, // unlimited
+      maxUsers: -1,
       maxProjects: -1,
       aiQueriesPerMonth: -1,
       analytics: true,
