@@ -13,7 +13,8 @@ export async function GET() {
     results.anthropic_key = "❌ MISSING - not set in environment";
   } else {
     const hasWhitespace = rawKey !== trimmedKey;
-    results.anthropic_key = `✅ Found (starts with ${trimmedKey.slice(0, 12)}..., length=${trimmedKey.length}${hasWhitespace ? ", ⚠️ HAD WHITESPACE - trimmed" : ", no whitespace"})`;
+    const last4 = trimmedKey.slice(-4);
+    results.anthropic_key = `✅ Found (starts with ${trimmedKey.slice(0, 16)}..., ends with ...${last4}, length=${trimmedKey.length}${hasWhitespace ? ", ⚠️ HAD WHITESPACE - trimmed" : ""})`;
   }
 
   results.database_url = process.env.DATABASE_URL
