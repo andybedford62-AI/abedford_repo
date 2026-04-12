@@ -4,13 +4,18 @@ import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Increase function timeout for streaming responses
+export const maxDuration = 60;
 
 const chatSchema = z.object({
   message: z.string().min(1).max(10000),
   conversationId: z.string().optional(),
   context: z.string().optional(),
 });
+
+function getClient() {
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+}
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -29,6 +34,10 @@ export async function POST(req: NextRequest) {
     const { message, conversationId, context } = parsed.data;
     const userId = session.user.id;
 
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: "AI service not configured" }, { status: 503 });
+    }
+
     // Get or create conversation
     let conversation;
     if (conversationId) {
@@ -43,9 +52,6 @@ export async function POST(req: NextRequest) {
         data: {
           userId,
           title: message.slice(0, 50),
-          messages: {
-            create: [],
-          },
         },
         include: { messages: true },
       });
@@ -57,10 +63,8 @@ export async function POST(req: NextRequest) {
       content: m.content,
     }));
 
-    // Add current message
     history.push({ role: "user", content: message });
 
-    // System prompt with workspace context
     const systemPrompt = `You are an AI assistant integrated into NexusAI, an AI-powered team workspace platform. You help teams collaborate, manage projects, and be more productive.
 
 Your capabilities:
@@ -75,15 +79,9 @@ Your capabilities:
 Be concise but thorough. Use markdown formatting when helpful (code blocks, lists, headers). Be friendly and professional.
 ${context ? `\nWorkspace context: ${context}` : ""}`;
 
-    // Call Claude API with streaming
-    const stream = await client.messages.stream({
-      model: "claude-sonnet-4-6",
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: history,
-    });
+    const client = getClient();
 
-    // Save user message
+    // Save user message first
     await db.aiMessage.create({
       data: {
         conversationId: conversation.id,
@@ -98,29 +96,45 @@ ${context ? `\nWorkspace context: ${context}` : ""}`;
 
     const readable = new ReadableStream({
       async start(controller) {
-        for await (const chunk of stream) {
-          if (chunk.type === "content_block_delta" && chunk.delta.type === "text_delta") {
-            const text = chunk.delta.text;
-            fullResponse += text;
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text, conversationId: conversation!.id })}\n\n`));
-          }
-        }
-
-        // Save assistant message
-        await db.aiMessage.create({
-          data: {
-            conversationId: conversation!.id,
-            role: "ASSISTANT",
-            content: fullResponse,
-          },
-        });
-
-        // Update conversation title if first message
-        if (conversation!.messages.length === 0) {
-          await db.aiConversation.update({
-            where: { id: conversation!.id },
-            data: { title: message.slice(0, 60) + (message.length > 60 ? "..." : "") },
+        try {
+          const stream = await client.messages.stream({
+            model: "claude-sonnet-4-6",
+            max_tokens: 2048,
+            system: systemPrompt,
+            messages: history,
           });
+
+          for await (const chunk of stream) {
+            if (chunk.type === "content_block_delta" && chunk.delta.type === "text_delta") {
+              const text = chunk.delta.text;
+              fullResponse += text;
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ text, conversationId: conversation!.id })}\n\n`)
+              );
+            }
+          }
+
+          // Save assistant response
+          await db.aiMessage.create({
+            data: {
+              conversationId: conversation!.id,
+              role: "ASSISTANT",
+              content: fullResponse || "No response generated.",
+            },
+          });
+
+          // Update title on first message
+          if (conversation!.messages.length === 0) {
+            await db.aiConversation.update({
+              where: { id: conversation!.id },
+              data: { title: message.slice(0, 60) + (message.length > 60 ? "..." : "") },
+            });
+          }
+        } catch (streamError) {
+          console.error("[AI_STREAM_ERROR]", streamError);
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ text: "\n\n*Error generating response. Please try again.*" })}\n\n`)
+          );
         }
 
         controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
