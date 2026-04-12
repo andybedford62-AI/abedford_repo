@@ -68,7 +68,7 @@ Be concise but thorough. Use markdown formatting when helpful. Be friendly and p
     // Call Claude API (non-streaming for reliability)
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY.trim() });
     const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 1024,
       system: systemPrompt,
       messages: history,

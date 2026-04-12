@@ -200,7 +200,7 @@ export default function AIAssistantPage() {
           <div>
             <h1 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
               Claude AI Assistant
-              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-nexus-100 dark:bg-nexus-950/50 text-nexus-700 dark:text-nexus-300 uppercase tracking-wide">claude-sonnet-4-6</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-nexus-100 dark:bg-nexus-950/50 text-nexus-700 dark:text-nexus-300 uppercase tracking-wide">claude-haiku-4-5</span>
             </h1>
             <p className="text-xs text-gray-400">Powered by Anthropic · Context-aware workspace AI</p>
           </div>
