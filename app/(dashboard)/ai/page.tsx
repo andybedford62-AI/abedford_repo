@@ -112,38 +112,17 @@ export default function AIAssistantPage() {
         body: JSON.stringify({ message: messageText, conversationId }),
       });
 
-      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
 
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+      if (!res.ok) throw new Error(data.error || "Failed");
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6);
-            if (data === "[DONE]") break;
-            try {
-              const { text, conversationId: cId } = JSON.parse(data);
-              if (cId && !conversationId) setConversationId(cId);
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMsgId ? { ...m, content: m.content + text } : m
-                )
-              );
-            } catch {
-              // ignore parse errors
-            }
-          }
-        }
-      }
+      const { text, conversationId: cId } = data;
+      if (cId && !conversationId) setConversationId(cId);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId ? { ...m, content: text } : m
+        )
+      );
     } catch (err) {
       setMessages((prev) =>
         prev.map((m) =>
