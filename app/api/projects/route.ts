@@ -3,11 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
+const columnSchema = z.object({
+  name: z.string().min(1).max(50),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+});
+
 const createProjectSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   dueDate: z.string().optional(),
+  columns: z.array(columnSchema).min(1).max(10).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -33,7 +39,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No workspace found" }, { status: 404 });
     }
 
-    const { name, description, color, dueDate } = parsed.data;
+    const { name, description, color, dueDate, columns } = parsed.data;
 
     const project = await db.project.create({
       data: {
@@ -45,14 +51,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Create default Kanban columns
+    const defaultColumns = [
+      { name: "To Do", color: "#64748b" },
+      { name: "In Progress", color: "#3b82f6" },
+      { name: "In Review", color: "#f59e0b" },
+      { name: "Done", color: "#10b981" },
+    ];
+
+    const cols = columns ?? defaultColumns;
     await db.column.createMany({
-      data: [
-        { projectId: project.id, name: "To Do", order: 0, color: "#64748b" },
-        { projectId: project.id, name: "In Progress", order: 1, color: "#3b82f6" },
-        { projectId: project.id, name: "In Review", order: 2, color: "#f59e0b" },
-        { projectId: project.id, name: "Done", order: 3, color: "#10b981" },
-      ],
+      data: cols.map((col, i) => ({ projectId: project.id, name: col.name, order: i, color: col.color })),
     });
 
     // Log activity
