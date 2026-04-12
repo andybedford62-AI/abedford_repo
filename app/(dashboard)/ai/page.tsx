@@ -114,7 +114,7 @@ export default function AIAssistantPage() {
 
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.detail || data.error || "Failed");
+      if (!res.ok) throw new Error(data.error || "Failed");
 
       const { text, conversationId: cId } = data;
       if (cId && !conversationId) setConversationId(cId);
@@ -127,7 +127,7 @@ export default function AIAssistantPage() {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMsgId
-            ? { ...m, content: `Error: ${err instanceof Error ? err.message : String(err)}` }
+            ? { ...m, content: "Sorry, I encountered an error. Please try again." }
             : m
         )
       );

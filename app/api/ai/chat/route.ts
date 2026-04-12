@@ -101,7 +101,7 @@ Be concise but thorough. Use markdown formatting when helpful. Be friendly and p
 
   } catch (error) {
     console.error("[AI_CHAT]", error);
-    return NextResponse.json({ error: "AI service error", detail: String(error) }, { status: 500 });
+    return NextResponse.json({ error: "AI service error" }, { status: 500 });
   }
 }
 
