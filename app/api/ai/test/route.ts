@@ -7,9 +7,14 @@ export async function GET() {
   const results: Record<string, string> = {};
 
   // 1. Check env var
-  results.anthropic_key = process.env.ANTHROPIC_API_KEY
-    ? `✅ Found (starts with ${process.env.ANTHROPIC_API_KEY.slice(0, 12)}...)`
-    : "❌ MISSING - not set in environment";
+  const rawKey = process.env.ANTHROPIC_API_KEY ?? "";
+  const trimmedKey = rawKey.trim();
+  if (!rawKey) {
+    results.anthropic_key = "❌ MISSING - not set in environment";
+  } else {
+    const hasWhitespace = rawKey !== trimmedKey;
+    results.anthropic_key = `✅ Found (starts with ${trimmedKey.slice(0, 12)}..., length=${trimmedKey.length}${hasWhitespace ? ", ⚠️ HAD WHITESPACE - trimmed" : ", no whitespace"})`;
+  }
 
   results.database_url = process.env.DATABASE_URL
     ? "✅ Found"
@@ -39,10 +44,10 @@ export async function GET() {
 
   // 4. Check Anthropic API
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!trimmedKey) {
       results.anthropic_api = "❌ Skipped - no API key";
     } else {
-      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const client = new Anthropic({ apiKey: trimmedKey });
       const response = await client.messages.create({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 20,
