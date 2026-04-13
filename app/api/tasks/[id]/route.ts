@@ -3,6 +3,52 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const task = await db.task.findFirst({
+    where: {
+      id: params.id,
+      project: { workspace: { members: { some: { userId: session.user.id } } } },
+    },
+    include: {
+      assignee: { select: { id: true, name: true, image: true } },
+      creator: { select: { id: true, name: true, image: true } },
+      column: { select: { id: true, name: true, color: true } },
+      project: {
+        select: {
+          id: true,
+          name: true,
+          color: true,
+          columns: { select: { id: true, name: true, color: true }, orderBy: { order: "asc" } },
+        },
+      },
+      comments: { orderBy: { createdAt: "asc" } },
+    },
+  });
+
+  if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+
+  // Fetch comment authors (no direct relation in schema)
+  const authorIds = [...new Set(task.comments.map((c) => c.authorId))];
+  const authors = authorIds.length
+    ? await db.user.findMany({
+        where: { id: { in: authorIds } },
+        select: { id: true, name: true, image: true },
+      })
+    : [];
+  const authorMap = Object.fromEntries(authors.map((a) => [a.id, a]));
+
+  return NextResponse.json({
+    ...task,
+    comments: task.comments.map((c) => ({
+      ...c,
+      author: authorMap[c.authorId] ?? { id: c.authorId, name: "Unknown", image: null },
+    })),
+  });
+}
+
 const updateTaskSchema = z.object({
   title: z.string().min(1).max(500).optional(),
   description: z.string().optional(),
