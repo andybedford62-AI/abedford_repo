@@ -45,6 +45,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
       <ProjectHeader project={project} />
       <KanbanBoard
         project={project}
+        initialColumns={project.columns}
         currentUserId={session.user.id}
         members={project.workspace.members.map((m) => m.user)}
       />

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, MoreHorizontal, GripVertical, User, Calendar, MessageSquare, AlertCircle, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { cn, generateInitials, formatRelativeTime } from "@/lib/utils";
+import { ProjectSetupGuide } from "./project-setup-guide";
 
 interface Member {
   id: string;
@@ -31,7 +32,7 @@ interface Column {
 }
 
 interface KanbanBoardProps {
-  project: { id: string; name: string; color: string };
+  project: { id: string; name: string; color: string; description?: string | null };
   currentUserId: string;
   members: Member[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,6 +40,8 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ project, initialColumns = [], currentUserId, members }: KanbanBoardProps & { initialColumns?: Column[] }) {
+  const totalTasks = initialColumns.reduce((sum, col) => sum + col.tasks.length, 0);
+  const [showSetupGuide, setShowSetupGuide] = useState(totalTasks === 0);
   const [columns, setColumns] = useState<Column[]>(initialColumns);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
@@ -132,6 +135,21 @@ export function KanbanBoard({ project, initialColumns = [], currentUserId, membe
       console.error("Failed to save task", err);
     }
   };
+
+  if (showSetupGuide) {
+    return (
+      <ProjectSetupGuide
+        project={project}
+        firstColumn={columns[0]}
+        allColumns={columns}
+        members={members}
+        onComplete={() => {
+          // Re-fetch columns with new tasks by reloading the page
+          window.location.reload();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="flex-1 overflow-x-auto pb-4 scrollbar-thin">
